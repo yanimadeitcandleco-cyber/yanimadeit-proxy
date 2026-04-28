@@ -8,7 +8,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-let productionCosts = {};
+let variantCosts = {};
 const LOW_THRESHOLD = 5;
 
 async function getToken() {
@@ -24,6 +24,7 @@ async function getToken() {
   const d = await r.json();
   return d.access_token;
 }
+
 app.get('/shopify/products', async (req, res) => {
   try {
     const token = await getToken();
@@ -32,14 +33,20 @@ app.get('/shopify/products', async (req, res) => {
     });
     const data = await r.json();
     const products = (data.products || []).map(function(p) {
-      const cost = productionCosts[p.id] || 0;
-      const price = parseFloat(p.variants[0] ? p.variants[0].price : 0);
-      const inventory = p.variants.reduce(function(sum, v) { return sum + (v.inventory_quantity || 0); }, 0);
+      const total_inventory = p.variants.reduce(function(sum, v) { return sum + (v.inventory_quantity || 0); }, 0);
+      const variants_with_costs = p.variants.map(function(v) {
+        const cost = variantCosts[v.id] || 0;
+        const price = parseFloat(v.price || 0);
+        return Object.assign({}, v, {
+          production_cost: cost,
+          profit: cost > 0 ? (price - cost).toFixed(2) : null,
+          profit_margin: cost > 0 ? (((price - cost) / price) * 100).toFixed(1) + '%' : 'N/A'
+        });
+      });
       return Object.assign({}, p, {
-        production_cost: cost,
-        profit_margin: cost > 0 ? (((price - cost) / price) * 100).toFixed(1) + '%' : 'N/A',
-        total_inventory: inventory,
-        low_inventory_alert: inventory <= LOW_THRESHOLD
+        variants: variants_with_costs,
+        total_inventory: total_inventory,
+        low_inventory_alert: total_inventory <= LOW_THRESHOLD
       });
     });
     res.json({ products: products });
@@ -79,17 +86,17 @@ app.get('/shopify/inventory', async (req, res) => {
 });
 
 app.post('/costs', function(req, res) {
-  const product_id = req.body.product_id;
+  const variant_id = req.body.variant_id;
   const cost = req.body.cost;
-  if (!product_id || cost === undefined) {
-    return res.status(400).json({ error: 'Missing product_id or cost' });
+  if (!variant_id || cost === undefined) {
+    return res.status(400).json({ error: 'Missing variant_id or cost' });
   }
-  productionCosts[product_id] = parseFloat(cost);
-  res.json({ success: true, product_id: product_id, cost: productionCosts[product_id] });
+  variantCosts[variant_id] = parseFloat(cost);
+  res.json({ success: true, variant_id: variant_id, cost: variantCosts[variant_id] });
 });
 
 app.get('/costs', function(req, res) {
-  res.json(productionCosts);
+  res.json(variantCosts);
 });
 
 const PORT = process.env.PORT || 8080;
