@@ -39,11 +39,12 @@
   .section-title { font-family: 'DM Serif Display', serif; font-size: 18px; margin-bottom: 16px; }
   .alert-banner { background: rgba(224,92,75,0.1); border: 1px solid rgba(224,92,75,0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 20px; color: var(--red); font-size: 13px; font-weight: 500; }
   table { width: 100%; border-collapse: collapse; }
-  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
   th { text-align: left; padding: 12px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); background: var(--surface2); border-bottom: 1px solid var(--border); }
-  td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: var(--surface2); }
+  .product-header td { background: var(--surface2); font-weight: 600; color: var(--gold); font-family: 'DM Serif Display', serif; font-size: 15px; }
   .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
   .badge-red { background: rgba(224,92,75,0.15); color: var(--red); }
   .badge-green { background: rgba(91,168,130,0.15); color: var(--green); }
@@ -51,12 +52,13 @@
   .badge-gray { background: rgba(138,128,112,0.15); color: var(--text-muted); }
   .cost-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; padding: 6px 10px; width: 90px; text-align: right; }
   .cost-input:focus { outline: none; border-color: var(--gold); }
-  .save-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--gold); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .save-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--gold); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
   .save-btn:hover { background: var(--gold); color: #0e0c0a; }
-  .product-img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; background: var(--surface2); }
+  .product-img { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; background: var(--surface2); }
   .loading { text-align: center; padding: 60px; color: var(--text-muted); }
   .order-total { font-weight: 600; color: var(--gold); }
   .empty { text-align: center; padding: 40px; color: var(--text-muted); }
+  .size-label { color: var(--text-muted); font-size: 12px; }
 </style>
 </head>
 <body>
@@ -89,7 +91,7 @@
   <div class="tab" id="tab-products">
     <div class="section-title">All Products</div>
     <div class="table-wrap"><table>
-      <thead><tr><th>Product</th><th>Price</th><th>Inventory</th><th>Prod. Cost</th><th>Margin</th><th>Status</th></tr></thead>
+      <thead><tr><th>Product / Size</th><th>Sale Price</th><th>Inventory</th><th>Prod. Cost</th><th>Profit</th><th>Margin</th></tr></thead>
       <tbody id="products-body"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
     </table></div>
   </div>
@@ -110,11 +112,8 @@
   </div>
   <div class="tab" id="tab-costs">
     <div class="section-title">Production Costs & Margins</div>
-    <p style="color:var(--text-muted);margin-bottom:20px;font-size:13px;">Enter your production cost per product to calculate profit margins.</p>
-    <div class="table-wrap"><table>
-      <thead><tr><th>Product</th><th>Sale Price</th><th>Production Cost</th><th>Profit</th><th>Margin</th><th></th></tr></thead>
-      <tbody id="costs-body"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
-    </table></div>
+    <p style="color:var(--text-muted);margin-bottom:20px;font-size:13px;">Enter your production cost per size to calculate profit margins for each variant.</p>
+    <div id="costs-container"><div class="loading">Loading...</div></div>
   </div>
 </main>
 <script>
@@ -178,15 +177,22 @@ function updateStats() {
 function renderProducts() {
   const tbody = document.getElementById('products-body');
   if (!productsData.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No products found</td></tr>'; return; }
-  tbody.innerHTML = productsData.map(p => {
-    const price = p.variants && p.variants[0] ? '$' + parseFloat(p.variants[0].price).toFixed(2) : '—';
+  let rows = '';
+  productsData.forEach(function(p) {
     const img = p.image ? '<img class="product-img" src="' + p.image.src + '">' : '<div class="product-img"></div>';
-    const invBadge = p.low_inventory_alert ? '<span class="badge badge-red">⚠ ' + p.total_inventory + ' left</span>' : '<span class="badge badge-green">' + p.total_inventory + ' in stock</span>';
-    const margin = p.profit_margin !== 'N/A' ? '<span class="badge badge-gold">' + p.profit_margin + '</span>' : '<span class="badge badge-gray">Set cost</span>';
-    const cost = p.production_cost > 0 ? '$' + p.production_cost.toFixed(2) : '<span style="color:var(--text-muted)">—</span>';
-    const status = p.status === 'active' ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-gray">' + p.status + '</span>';
-    return '<tr><td><div style="display:flex;align-items:center;gap:12px">' + img + '<strong>' + p.title + '</strong></div></td><td>' + price + '</td><td>' + invBadge + '</td><td>' + cost + '</td><td>' + margin + '</td><td>' + status + '</td></tr>';
-  }).join('');
+    const invBadge = p.low_inventory_alert ? '<span class="badge badge-red">⚠ Low</span>' : '<span class="badge badge-green">OK</span>';
+    rows += '<tr class="product-header"><td colspan="6"><div style="display:flex;align-items:center;gap:10px">' + img + p.title + ' ' + invBadge + '</div></td></tr>';
+    p.variants.forEach(function(v) {
+      const cost = v.production_cost || 0;
+      const price = parseFloat(v.price || 0);
+      const invColor = (v.inventory_quantity || 0) <= 5 ? 'color:var(--red)' : 'color:var(--green)';
+      const margin = v.profit_margin !== 'N/A' ? '<span class="badge badge-gold">' + v.profit_margin + '</span>' : '<span class="badge badge-gray">—</span>';
+      const profit = v.profit ? '<span style="color:var(--green)">$' + v.profit + '</span>' : '<span style="color:var(--text-muted)">—</span>';
+      const costDisplay = cost > 0 ? '$' + cost.toFixed(2) : '<span style="color:var(--text-muted)">—</span>';
+      rows += '<tr><td style="padding-left:28px"><span class="size-label">' + (v.title || v.option1) + '</span></td><td>$' + price.toFixed(2) + '</td><td style="' + invColor + '">' + (v.inventory_quantity || 0) + ' units</td><td>' + costDisplay + '</td><td>' + profit + '</td><td>' + margin + '</td></tr>';
+    });
+  });
+  tbody.innerHTML = rows;
 }
 
 function renderInventory() {
@@ -233,26 +239,37 @@ function renderRecentOrders() {
 }
 
 function renderCosts() {
-  const tbody = document.getElementById('costs-body');
-  if (!productsData.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No products found</td></tr>'; return; }
-  tbody.innerHTML = productsData.map(p => {
-    const price = p.variants && p.variants[0] ? parseFloat(p.variants[0].price) : 0;
-    const cost = p.production_cost || 0;
-    const profit = cost > 0 ? (price - cost).toFixed(2) : '—';
-    const margin = p.profit_margin !== 'N/A' ? p.profit_margin : '—';
-    const profitColor = cost > 0 ? 'color:var(--green)' : 'color:var(--text-muted)';
-    return '<tr><td><strong>' + p.title + '</strong></td><td>$' + price.toFixed(2) + '</td><td><input class="cost-input" type="number" step="0.01" min="0" value="' + cost + '" id="cost-' + p.id + '" placeholder="0.00"></td><td style="' + profitColor + '">' + (cost > 0 ? '$' + profit : '—') + '</td><td>' + (margin !== '—' ? '<span class="badge badge-gold">' + margin + '</span>' : '<span class="badge badge-gray">—</span>') + '</td><td><button class="save-btn" onclick="saveCost(' + p.id + ')">Save</button></td></tr>';
-  }).join('');
+  const container = document.getElementById('costs-container');
+  if (!productsData.length) { container.innerHTML = '<div class="empty">No products found</div>'; return; }
+  let html = '';
+  productsData.forEach(function(p) {
+    html += '<div class="table-wrap"><table>';
+    html += '<thead><tr><th colspan="6" style="font-family:DM Serif Display,serif;font-size:15px;color:var(--gold)">' + p.title + '</th></tr>';
+    html += '<tr><th>Size</th><th>Sale Price</th><th>Production Cost</th><th>Profit per Unit</th><th>Margin</th><th></th></tr></thead><tbody>';
+    p.variants.forEach(function(v) {
+      const price = parseFloat(v.price || 0);
+      const cost = v.production_cost || 0;
+      const profit = cost > 0 ? '$' + (price - cost).toFixed(2) : '—';
+      const margin = v.profit_margin !== 'N/A' ? '<span class="badge badge-gold">' + v.profit_margin + '</span>' : '<span class="badge badge-gray">—</span>';
+      const profitColor = cost > 0 ? 'color:var(--green)' : 'color:var(--text-muted)';
+      html += '<tr><td><strong>' + (v.title || v.option1) + '</strong></td><td>$' + price.toFixed(2) + '</td>';
+      html += '<td><input class="cost-input" type="number" step="0.01" min="0" value="' + cost + '" id="cost-' + v.id + '" placeholder="0.00"></td>';
+      html += '<td style="' + profitColor + '">' + profit + '</td><td>' + margin + '</td>';
+      html += '<td><button class="save-btn" onclick="saveCost(' + v.id + ')">Save</button></td></tr>';
+    });
+    html += '</tbody></table></div>';
+  });
+  container.innerHTML = html;
 }
 
-async function saveCost(productId) {
-  const input = document.getElementById('cost-' + productId);
+async function saveCost(variantId) {
+  const input = document.getElementById('cost-' + variantId);
   const cost = parseFloat(input.value) || 0;
   try {
     await fetch(API + '/costs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ product_id: productId, cost: cost })
+      body: JSON.stringify({ variant_id: variantId, cost: cost })
     });
     await loadProducts();
   } catch(e) { alert('Error saving cost'); }
