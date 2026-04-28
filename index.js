@@ -10,53 +10,51 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const LOW_THRESHOLD = 5;
 
-// Default costs from cost sheets (Shopify unit cost)
-// Format: shopify_variant_title -> { '5oz': cost, '9oz': cost, '12oz': cost }
 const DEFAULT_COSTS = {
-  'Plain Jane':       { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
-  'Adjust':           { '5oz': 13.05, '9oz': 17.90, '12oz': 23.95 },
-  'Anna Bird':        { '5oz': 12.74, '9oz': 17.35, '12oz': 23.20 },
-  'Ask G.O.D':        { '5oz': 12.74, '9oz': 17.35, '12oz': 23.20 },
-  'Balance':          { '5oz': 12.72, '9oz': 17.31, '12oz': 23.15 },
-  'Be Honest':        { '5oz': 13.05, '9oz': 17.90, '12oz': 23.95 },
-  'Body Language':    { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
-  'Body language':    { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
-  'C\'est La Vie':    { '5oz': 12.61, '9oz': 17.12, '12oz': 22.90 },
-  'Create':           { '5oz': 13.99, '9oz': 19.60, '12oz': 26.20 },
-  'Free Spirit':      { '5oz': 12.92, '9oz': 17.68, '12oz': 23.65 },
-  'Fresh':            { '5oz': 13.05, '9oz': 17.90, '12oz': 23.95 },
-  'Let it go!':       { '5oz': 13.05, '9oz': 17.90, '12oz': 23.95 },
-  'Let It Go!':       { '5oz': 13.05, '9oz': 17.90, '12oz': 23.95 },
-  'Life':             { '5oz': 14.30, '9oz': 20.15, '12oz': 26.95 },
-  'Noice!':           { '5oz': 13.05, '9oz': 17.90, '12oz': 23.95 },
-  'Patience':         { '5oz': 12.92, '9oz': 17.68, '12oz': 23.65 },
-  'Pause':            { '5oz': 12.61, '9oz': 17.12, '12oz': 22.90 },
-  'Profound':         { '5oz': 12.61, '9oz': 17.12, '12oz': 22.90 },
-  'Rest':             { '5oz': 13.05, '9oz': 17.90, '12oz': 23.95 },
-  'Smooth':           { '5oz': 12.92, '9oz': 17.68, '12oz': 23.65 },
-  'Sweetest Taboo':   { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
-  'Thank You':        { '5oz': 13.67, '9oz': 19.03, '12oz': 25.45 },
-  'Transition':       { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
-  'Vibe Worthy':      { '5oz': 13.39, '9oz': 18.52, '12oz': 24.77 },
-  'You Decide':       { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
-  'You decide':       { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
-  'Sueño lúcido':     { '5oz': 12.42, '9oz': 16.78, '12oz': 22.45 },
+  'Plain Jane':        { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
+  'Adjust':            { '5oz': 13.05, '9oz': 17.90, '12oz': 23.95 },
+  'Anna Bird':         { '5oz': 12.74, '9oz': 17.35, '12oz': 23.20 },
+  'Ask G.O.D':         { '5oz': 12.74, '9oz': 17.35, '12oz': 23.20 },
+  'Balance':           { '5oz': 12.72, '9oz': 17.31, '12oz': 23.15 },
+  'Be Honest':         { '5oz': 13.05, '9oz': 17.90, '12oz': 23.95 },
+  'Body Language':     { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
+  'Body language':     { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
+  'C\'est La Vie':     { '5oz': 12.61, '9oz': 17.12, '12oz': 22.90 },
+  'Create':            { '5oz': 13.99, '9oz': 19.60, '12oz': 26.20 },
+  'Free Spirit':       { '5oz': 12.92, '9oz': 17.68, '12oz': 23.65 },
+  'Fresh':             { '5oz': 13.05, '9oz': 17.90, '12oz': 23.95 },
+  'Let it go!':        { '5oz': 13.05, '9oz': 17.90, '12oz': 23.95 },
+  'Let It Go!':        { '5oz': 13.05, '9oz': 17.90, '12oz': 23.95 },
+  'Life':              { '5oz': 14.30, '9oz': 20.15, '12oz': 26.95 },
+  'Noice!':            { '5oz': 13.05, '9oz': 17.90, '12oz': 23.95 },
+  'Patience':          { '5oz': 12.92, '9oz': 17.68, '12oz': 23.65 },
+  'Pause':             { '5oz': 12.61, '9oz': 17.12, '12oz': 22.90 },
+  'Profound':          { '5oz': 12.61, '9oz': 17.12, '12oz': 22.90 },
+  'Rest':              { '5oz': 13.05, '9oz': 17.90, '12oz': 23.95 },
+  'Smooth':            { '5oz': 12.92, '9oz': 17.68, '12oz': 23.65 },
+  'Sweetest Taboo':    { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
+  'Thank You':         { '5oz': 13.67, '9oz': 19.03, '12oz': 25.45 },
+  'Transition':        { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
+  'Vibe Worthy':       { '5oz': 13.39, '9oz': 18.52, '12oz': 24.77 },
+  'You Decide':        { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
+  'You decide':        { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
+  'Sueño lúcido':      { '5oz': 12.42, '9oz': 16.78, '12oz': 22.45 },
+  'Wick Trimmer':      { 'Default Title': 10.70 },
+  'Candle Snuffer':    { 'Default Title': 9.99 },
+  'Candle Care Combo': { 'Default Title': 20.69 },
 };
 
-// User overrides stored in memory
 let variantCostOverrides = {};
 
 function getCostForVariant(productTitle, variantTitle) {
-  // Check user overrides first
   const overrideKey = productTitle + '|' + variantTitle;
   if (variantCostOverrides[overrideKey] !== undefined) {
     return variantCostOverrides[overrideKey];
   }
-  // Fall back to default costs
   const productCosts = DEFAULT_COSTS[productTitle];
   if (productCosts) {
-    const size = variantTitle.replace('Default Title', '').trim();
-    return productCosts[size] || 0;
+    const size = variantTitle.replace('Default Title', 'Default Title').trim();
+    return productCosts[size] || productCosts['Default Title'] || 0;
   }
   return 0;
 }
