@@ -105,7 +105,7 @@ app.get('/shopify/products', async (req, res) => {
 app.get('/shopify/orders', async (req, res) => {
   try {
     const token = await getShopifyToken();
-    const r = await fetch('https://' + process.env.SHOPIFY_STORE + '/admin/api/2026-04/orders.json?limit=50&status=any', {
+    const r = await fetch('https://' + process.env.SHOPIFY_STORE + '/admin/api/2026-04/orders.json?limit=250&status=any&created_at_min=2026-01-01T00:00:00-08:00', {
       headers: { 'X-Shopify-Access-Token': token }
     });
     const data = await r.json();
