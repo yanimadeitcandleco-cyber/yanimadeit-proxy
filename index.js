@@ -53,13 +53,12 @@ function getCostForVariant(productTitle, variantTitle) {
   }
   const productCosts = DEFAULT_COSTS[productTitle];
   if (productCosts) {
-    const size = variantTitle.replace('Default Title', 'Default Title').trim();
-    return productCosts[size] || productCosts['Default Title'] || 0;
+    return productCosts[variantTitle] || productCosts['Default Title'] || 0;
   }
   return 0;
 }
 
-async function getToken() {
+async function getShopifyToken() {
   const params = new URLSearchParams();
   params.append('grant_type', 'client_credentials');
   params.append('client_id', process.env.SHOPIFY_CLIENT_ID);
@@ -75,7 +74,7 @@ async function getToken() {
 
 app.get('/shopify/products', async (req, res) => {
   try {
-    const token = await getToken();
+    const token = await getShopifyToken();
     const r = await fetch('https://' + process.env.SHOPIFY_STORE + '/admin/api/2026-04/products.json?limit=50', {
       headers: { 'X-Shopify-Access-Token': token }
     });
@@ -105,7 +104,7 @@ app.get('/shopify/products', async (req, res) => {
 
 app.get('/shopify/orders', async (req, res) => {
   try {
-    const token = await getToken();
+    const token = await getShopifyToken();
     const r = await fetch('https://' + process.env.SHOPIFY_STORE + '/admin/api/2026-04/orders.json?limit=50&status=any', {
       headers: { 'X-Shopify-Access-Token': token }
     });
@@ -116,18 +115,46 @@ app.get('/shopify/orders', async (req, res) => {
   }
 });
 
-app.get('/shopify/inventory', async (req, res) => {
+// SQUARE ENDPOINTS
+app.get('/square/orders', async (req, res) => {
   try {
-    const token = await getToken();
-    const r = await fetch('https://' + process.env.SHOPIFY_STORE + '/admin/api/2026-04/products.json?limit=50', {
-      headers: { 'X-Shopify-Access-Token': token }
+    const r = await fetch('https://connect.squareup.com/v2/orders/search', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + process.env.SQUARE_ACCESS_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query: { filter: { state_filter: { states: ['COMPLETED'] } } },
+        limit: 50
+      })
     });
     const data = await r.json();
-    const inventory = (data.products || []).map(function(p) {
-      const qty = p.variants.reduce(function(sum, v) { return sum + (v.inventory_quantity || 0); }, 0);
-      return { id: p.id, title: p.title, total_inventory: qty, low_alert: qty <= LOW_THRESHOLD };
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/square/inventory', async (req, res) => {
+  try {
+    const r = await fetch('https://connect.squareup.com/v2/catalog/list?types=ITEM', {
+      headers: { 'Authorization': 'Bearer ' + process.env.SQUARE_ACCESS_TOKEN }
     });
-    res.json({ inventory: inventory });
+    const data = await r.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/square/locations', async (req, res) => {
+  try {
+    const r = await fetch('https://connect.squareup.com/v2/locations', {
+      headers: { 'Authorization': 'Bearer ' + process.env.SQUARE_ACCESS_TOKEN }
+    });
+    const data = await r.json();
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
