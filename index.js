@@ -105,7 +105,7 @@ app.get('/shopify/products', async (req, res) => {
 app.get('/shopify/orders', async (req, res) => {
   try {
     const token = await getShopifyToken();
-    const r = await fetch('https://' + process.env.SHOPIFY_STORE + '/admin/api/2026-04/orders.json?limit=250&status=any&created_at_min=2026-01-01T00:00:00-08:00', {
+    const r = await fetch('https://' + process.env.SHOPIFY_STORE + '/admin/api/2026-04/orders.json?limit=250&status=any', {
       headers: { 'X-Shopify-Access-Token': token }
     });
     const data = await r.json();
@@ -139,18 +139,6 @@ app.get('/square/orders', async (req, res) => {
         },
         limit: 500
       })
-    });
-    const data = await r.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/square/inventory', async (req, res) => {
-  try {
-    const r = await fetch('https://connect.squareup.com/v2/catalog/list?types=ITEM', {
-      headers: { 'Authorization': 'Bearer ' + process.env.SQUARE_ACCESS_TOKEN }
     });
     const data = await r.json();
     res.json(data);
