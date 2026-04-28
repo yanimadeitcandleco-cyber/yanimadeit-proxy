@@ -38,7 +38,7 @@ const DEFAULT_COSTS = {
   'Vibe Worthy':       { '5oz': 13.39, '9oz': 18.52, '12oz': 24.77 },
   'You Decide':        { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
   'You decide':        { '5oz': 10.86, '9oz': 13.97, '12oz': 18.70 },
-  'Sueño lúcido':      { '5oz': 12.42, '9oz': 16.78, '12oz': 22.45 },
+  'Sueno lucido':      { '5oz': 12.42, '9oz': 16.78, '12oz': 22.45 },
   'Wick Trimmer':      { 'Default Title': 10.70 },
   'Candle Snuffer':    { 'Default Title': 9.99 },
   'Candle Care Combo': { 'Default Title': 20.69 },
@@ -115,7 +115,6 @@ app.get('/shopify/orders', async (req, res) => {
   }
 });
 
-// SQUARE ENDPOINTS
 app.get('/square/orders', async (req, res) => {
   try {
     const r = await fetch('https://connect.squareup.com/v2/orders/search', {
@@ -125,8 +124,20 @@ app.get('/square/orders', async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        query: { filter: { state_filter: { states: ['COMPLETED'] } } },
-        limit: 50
+        location_ids: ['1AXKJZGCYVWS4'],
+        query: {
+          filter: {
+            state_filter: { states: ['COMPLETED'] },
+            date_time_filter: {
+              created_at: {
+                start_at: '2026-01-01T00:00:00Z',
+                end_at: '2026-12-31T23:59:59Z'
+              }
+            }
+          },
+          sort: { sort_field: 'CREATED_AT', sort_order: 'DESC' }
+        },
+        limit: 500
       })
     });
     const data = await r.json();
